@@ -6,7 +6,7 @@
  * @version
  */
 package model.command;
-
+//表示两种不同的命令类型：设置 (SET) 和删除 (RM)。
 public enum CommandTypeEnum {
     /*
     * 增、改

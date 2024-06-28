@@ -22,7 +22,7 @@ public abstract class AbstractCommand implements Command {
     public AbstractCommand(CommandTypeEnum type) {
         this.type = type;
     }
-
+//将当前对象转换为 JSON 格式的字符串
     @Override
     public String toString() {
         return JSON.toJSONString(this);

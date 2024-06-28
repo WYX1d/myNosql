@@ -8,7 +8,7 @@
 package utils;
 
 import org.slf4j.Logger;
-
+//调用适当的 Logger 方法来记录日志
 public class LoggerUtil {
 
     public static void debug(Logger logger, String format, Object... arguments) {

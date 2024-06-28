@@ -12,7 +12,7 @@ import model.command.Command;
 import model.command.CommandTypeEnum;
 import model.command.RmCommand;
 import model.command.SetCommand;
-
+//将一个 JSON 对象转换为相应的命令对象（Command 对象）
 public class CommandUtil {
     public static final String TYPE = "type";
 

@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -68,6 +69,7 @@ public class NormalStore implements Store {
      * 持久化阈值
      */
 //    private final int storeThreshold;
+    private static final int THRESHOLD_FOR_PERSISTENCE = 100;
 
     public NormalStore(String dataDir) {
         this.dataDir = dataDir;
@@ -126,17 +128,42 @@ public class NormalStore implements Store {
             RandomAccessFileUtil.writeInt(this.genFilePath(), commandBytes.length);
             int pos = RandomAccessFileUtil.write(this.genFilePath(), commandBytes);
             // 保存到memTable
+            memTable.put(key, command); // 将指令存入内存表
             // 添加索引
             CommandPos cmdPos = new CommandPos(pos, commandBytes.length);
             index.put(key, cmdPos);
             // TODO://判断是否需要将内存表中的值写回table
+            // 判断是否需要将内存表中的值写回table
+            if (memTable.size() >= THRESHOLD_FOR_PERSISTENCE) {
+                persistMemTable(); // 持久化内存表到磁盘
+            }
         } catch (Throwable t) {
             throw new RuntimeException(t);
         } finally {
             indexLock.writeLock().unlock();
         }
     }
+    // 将内存表数据持久化到磁盘
+    private void persistMemTable() {
+        try {
+            // 逐个将内存表中的指令写入磁盘
+            for (Map.Entry<String, Command> entry : memTable.entrySet()) {
+                String key = entry.getKey();
+                Command command = entry.getValue();
+                byte[] commandBytes = JSONObject.toJSONBytes(command);
 
+                RandomAccessFileUtil.writeInt(this.genFilePath(), commandBytes.length);
+                int pos = RandomAccessFileUtil.write(this.genFilePath(), commandBytes);
+
+                CommandPos cmdPos = new CommandPos(pos, commandBytes.length);
+                index.put(key, cmdPos);
+            }
+            // 清空内存表
+            memTable.clear();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
     @Override
     public String get(String key) {
         try {
@@ -177,13 +204,16 @@ public class NormalStore implements Store {
             // 写table（wal）文件
             int pos = RandomAccessFileUtil.write(this.genFilePath(), commandBytes);
             // 保存到memTable
+            memTable.put(key, command); // 将指令存入内存表
 
             // 添加索引
             CommandPos cmdPos = new CommandPos(pos, commandBytes.length);
             index.put(key, cmdPos);
 
             // TODO://判断是否需要将内存表中的值写回table
-
+            if (memTable.size() >= THRESHOLD_FOR_PERSISTENCE) {
+                persistMemTable(); // 持久化内存表到磁盘
+            }
         } catch (Throwable t) {
             throw new RuntimeException(t);
         } finally {
