@@ -65,6 +65,7 @@ public class NormalStore implements Store {
      */
     private RandomAccessFile writerReader;
 
+
     /**
      * 持久化阈值
      */
@@ -115,7 +116,7 @@ public class NormalStore implements Store {
         }
         LoggerUtil.debug(LOGGER, logFormat, "reload index: "+index.toString());
     }
-
+     //增改操作
     @Override
     public void set(String key, String value) {
         try {
@@ -126,7 +127,7 @@ public class NormalStore implements Store {
             // TODO://先写内存表，内存表达到一定阀值再写进磁盘
             // 写table（wal）文件
             RandomAccessFileUtil.writeInt(this.genFilePath(), commandBytes.length);
-            int pos = RandomAccessFileUtil.write(this.genFilePath(), commandBytes);
+            int pos = RandomAccessFileUtil.write(this.genFilePath(), commandBytes);//返回偏移量
             // 保存到memTable
             memTable.put(key, command); // 将指令存入内存表
             // 添加索引
@@ -164,6 +165,7 @@ public class NormalStore implements Store {
             e.printStackTrace();
         }
     }
+    //查询数据
     @Override
     public String get(String key) {
         try {
@@ -191,7 +193,7 @@ public class NormalStore implements Store {
         }
         return null;
     }
-
+    //删除操作
     @Override
     public void rm(String key) {
         try {
@@ -201,7 +203,7 @@ public class NormalStore implements Store {
             indexLock.writeLock().lock();
             // TODO://先写内存表，内存表达到一定阀值再写进磁盘
 
-            // 写table（wal）文件
+            // 写table（wal）文件，返回偏移量
             int pos = RandomAccessFileUtil.write(this.genFilePath(), commandBytes);
             // 保存到memTable
             memTable.put(key, command); // 将指令存入内存表
@@ -223,6 +225,13 @@ public class NormalStore implements Store {
 
     @Override
     public void close() throws IOException {
-
+        try {
+            if (writerReader != null) {
+                writerReader.close();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("关闭 RandomAccessFile 时出现异常", e);
+        }
     }
+
 }
