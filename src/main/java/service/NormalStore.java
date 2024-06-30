@@ -20,6 +20,7 @@ import utils.CommandUtil;
 import utils.LoggerUtil;
 import utils.RandomAccessFileUtil;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -99,9 +100,23 @@ public class NormalStore implements Store {
             file.seek(start);
             while (start < len) {
                 int cmdLen = file.readInt();
+                if (cmdLen <= 0) {
+                    // Handle the case where cmdLen is invalid
+                    // Maybe log an error or throw an exception
+                    break; // Exit the loop if cmdLen is non-positive
+                }
                 byte[] bytes = new byte[cmdLen];
-                file.read(bytes);
+                int bytesRead = file.read(bytes);
+                if (bytesRead == -1) {
+                    break; // Exit the loop if end of file is reached unexpectedly
+                }
+                if (bytesRead != cmdLen) {
+                    // Handle the case where actual bytes read doesn't match expected cmdLen
+                    // Maybe log an error or throw an exception
+                    break; // Exit the loop to avoid incorrect processing
+                }
                 JSONObject value = JSON.parseObject(new String(bytes, StandardCharsets.UTF_8));
+                System.out.println(value);
                 Command command = CommandUtil.jsonToCommand(value);
                 start += 4;
                 if (command != null) {
@@ -109,6 +124,7 @@ public class NormalStore implements Store {
                     index.put(command.getKey(), cmdPos);
                 }
                 start += cmdLen;
+//                start += 4 + cmdLen; // 更新起始位置，加上命令长度和命令长度字段的长度
             }
             file.seek(file.length());
         } catch (Exception e) {
@@ -204,6 +220,7 @@ public class NormalStore implements Store {
             // TODO://先写内存表，内存表达到一定阀值再写进磁盘
 
             // 写table（wal）文件，返回偏移量
+            RandomAccessFileUtil.writeInt(this.genFilePath(), commandBytes.length);
             int pos = RandomAccessFileUtil.write(this.genFilePath(), commandBytes);
             // 保存到memTable
             memTable.put(key, command); // 将指令存入内存表

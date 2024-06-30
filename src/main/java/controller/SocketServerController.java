@@ -59,6 +59,7 @@ public class SocketServerController implements Controller {
             while (true) {
                 try {
                     Socket socket = serverSocket.accept();
+//                    记录服务器启动信息
                     LoggerUtil.info(LOGGER, logFormat,"startServer","New client connected");
                     // 为每个客户端连接创建一个新的线程
                     new Thread(new SocketServerHandler(socket, store)).start();

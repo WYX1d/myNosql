@@ -10,6 +10,7 @@ package client;
 import dto.ActionDTO;
 import dto.ActionTypeEnum;
 import dto.RespDTO;
+import dto.RmActionDTO;
 
 import java.io.*;
 import java.net.Socket;
@@ -30,9 +31,11 @@ public class SocketClient implements Client {
              ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) {
             // 传输序列化对象
             ActionDTO dto = new ActionDTO(ActionTypeEnum.SET, key, value);
+            System.out.println(dto.toString());
             oos.writeObject(dto);
             oos.flush();
             RespDTO resp = (RespDTO) ois.readObject();
+            resp.setValue(value);
             System.out.println("resp data: "+ resp.toString());
             // 接收响应数据
         } catch (IOException | ClassNotFoundException e) {
@@ -64,13 +67,20 @@ public class SocketClient implements Client {
              ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
              ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) {
             // 传输序列化对象
-            ActionDTO dto = new ActionDTO(ActionTypeEnum.RM, key, null); // 假设有一个 REMOVE 操作类型
+//            RmActionDTO dto = new RmActionDTO(ActionTypeEnum.RM, key);
+            ActionDTO dto = new ActionDTO(ActionTypeEnum.SET, key, null);
+            System.out.println(dto.toString());
             oos.writeObject(dto);
             oos.flush();
             RespDTO resp = (RespDTO) ois.readObject();
             System.out.println("resp data: "+ resp.toString());
             // 接收响应数据
-        } catch (IOException | ClassNotFoundException e) {
+        } catch (EOFException e) {
+            System.err.println("Connection closed unexpectedly."+ e.getMessage());
+            // For simplicity, let's just print the error
+            e.printStackTrace();
+        }catch (IOException | ClassNotFoundException e) {
+            System.err.println("Error closing resources: " + e.getMessage());
             e.printStackTrace();
         }
     }

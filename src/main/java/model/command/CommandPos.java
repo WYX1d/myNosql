@@ -17,8 +17,8 @@ public class CommandPos {
     private int len;
 
     public CommandPos(int pos, int len) {
-        this.pos = pos;
-        this.len = len;
+        this.pos = pos;//数据起始位置
+        this.len = len;//数据长度
     }
 
     @Override
