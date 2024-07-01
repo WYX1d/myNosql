@@ -10,7 +10,6 @@ package client;
 import dto.ActionDTO;
 import dto.ActionTypeEnum;
 import dto.RespDTO;
-import dto.RmActionDTO;
 
 import java.io.*;
 import java.net.Socket;
@@ -31,7 +30,6 @@ public class SocketClient implements Client {
              ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) {
             // 传输序列化对象
             ActionDTO dto = new ActionDTO(ActionTypeEnum.SET, key, value);
-            System.out.println(dto.toString());
             oos.writeObject(dto);
             oos.flush();
             RespDTO resp = (RespDTO) ois.readObject();
@@ -69,7 +67,6 @@ public class SocketClient implements Client {
             // 传输序列化对象
 //            RmActionDTO dto = new RmActionDTO(ActionTypeEnum.RM, key);
             ActionDTO dto = new ActionDTO(ActionTypeEnum.SET, key, null);
-            System.out.println(dto.toString());
             oos.writeObject(dto);
             oos.flush();
             RespDTO resp = (RespDTO) ois.readObject();

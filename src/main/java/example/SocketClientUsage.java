@@ -13,30 +13,16 @@ import client.SocketClient;
 import java.util.Scanner;
 
 public class SocketClientUsage {
-    private static SocketClient client;
+    private static String host = "localhost";
+    private static int port = 12345;
+   private static Client client = new SocketClient(host, port);
     public static void main(String[] args) {
-        String host = "localhost";
-        int port = 12345;
-        Client client = new SocketClient(host, port);
-//        client.get("zsy1");
-//        client.set("zsy12","for test");
-//        client.set("wyx1","1");
-//        client.set("wyx2","2");
-//        client.set("wyx3","3");
-//        client.set("wyx4","4");
-//        client.set("wyx5","5");
-//        client.set("wyx6","6");
-//        client.get("zsy12");
-//        client.get("wyx2");
-//        client.get("wyx4");
-//        client.set("wyx4","4.1");
-//        client.rm("zsy12");
-//        client.rm("wyx4");
-        client.rm("wyx6");
-//        client.get("zsy12");
+
         // 开始用户交互
-//        startUserInteraction();
+        startUserInteraction();
+
     }
+
     private static void startUserInteraction() {
         Scanner scanner = new Scanner(System.in);
         String input;
@@ -70,7 +56,6 @@ public class SocketClientUsage {
             case "get":
                 if (key != null) {
                     String result = client.get(key);
-                    System.out.println("GET " + key + " -> " + result);
                 } else {
                     System.out.println("Invalid command format: get <key>");
                 }
@@ -78,7 +63,6 @@ public class SocketClientUsage {
             case "set":
                 if (key != null && value != null) {
                     client.set(key, value);
-                    System.out.println("SET " + key + " -> " + value);
                 } else {
                     System.out.println("Invalid command format: set <key> <value>");
                 }
@@ -86,7 +70,6 @@ public class SocketClientUsage {
             case "rm":
                 if (key != null) {
                     client.rm(key);
-                    System.out.println("RM " + key);
                 } else {
                     System.out.println("Invalid command format: rm <key>");
                 }

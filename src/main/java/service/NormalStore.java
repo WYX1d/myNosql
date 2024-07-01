@@ -71,7 +71,7 @@ public class NormalStore implements Store {
      * 持久化阈值
      */
 //    private final int storeThreshold;
-    private static final int THRESHOLD_FOR_PERSISTENCE = 100;
+    private static final int THRESHOLD_FOR_PERSISTENCE = 30;
 
     public NormalStore(String dataDir) {
         this.dataDir = dataDir;
@@ -153,6 +153,7 @@ public class NormalStore implements Store {
             // 判断是否需要将内存表中的值写回table
             if (memTable.size() >= THRESHOLD_FOR_PERSISTENCE) {
                 persistMemTable(); // 持久化内存表到磁盘
+                System.out.println("已经持久化内存表到磁盘！");
             }
         } catch (Throwable t) {
             throw new RuntimeException(t);
@@ -232,6 +233,7 @@ public class NormalStore implements Store {
             // TODO://判断是否需要将内存表中的值写回table
             if (memTable.size() >= THRESHOLD_FOR_PERSISTENCE) {
                 persistMemTable(); // 持久化内存表到磁盘
+                System.out.println("已经持久化内存表到磁盘！");
             }
         } catch (Throwable t) {
             throw new RuntimeException(t);
