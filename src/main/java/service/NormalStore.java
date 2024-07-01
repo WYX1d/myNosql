@@ -70,7 +70,6 @@ public class NormalStore implements Store {
     /**
      * 持久化阈值
      */
-//    private final int storeThreshold;
     private static final int THRESHOLD_FOR_PERSISTENCE = 30;
 
     public NormalStore(String dataDir) {
@@ -101,8 +100,6 @@ public class NormalStore implements Store {
             while (start < len) {
                 int cmdLen = file.readInt();
                 if (cmdLen <= 0) {
-                    // Handle the case where cmdLen is invalid
-                    // Maybe log an error or throw an exception
                     break; // Exit the loop if cmdLen is non-positive
                 }
                 byte[] bytes = new byte[cmdLen];
@@ -111,8 +108,6 @@ public class NormalStore implements Store {
                     break; // Exit the loop if end of file is reached unexpectedly
                 }
                 if (bytesRead != cmdLen) {
-                    // Handle the case where actual bytes read doesn't match expected cmdLen
-                    // Maybe log an error or throw an exception
                     break; // Exit the loop to avoid incorrect processing
                 }
                 JSONObject value = JSON.parseObject(new String(bytes, StandardCharsets.UTF_8));
@@ -150,7 +145,7 @@ public class NormalStore implements Store {
             CommandPos cmdPos = new CommandPos(pos, commandBytes.length);
             index.put(key, cmdPos);
             // TODO://判断是否需要将内存表中的值写回table
-            // 判断是否需要将内存表中的值写回table
+            System.out.println(memTable.size());
             if (memTable.size() >= THRESHOLD_FOR_PERSISTENCE) {
                 persistMemTable(); // 持久化内存表到磁盘
                 System.out.println("已经持久化内存表到磁盘！");

@@ -8,6 +8,7 @@
 package example;
 
 import client.Client;
+import client.CmdClient;
 import client.SocketClient;
 
 import java.util.Scanner;
@@ -17,9 +18,10 @@ public class SocketClientUsage {
     private static int port = 12345;
    private static Client client = new SocketClient(host, port);
     public static void main(String[] args) {
-
+        CmdClient cmdClient = new CmdClient(client);
+        cmdClient.main();
         // 开始用户交互
-        startUserInteraction();
+//        startUserInteraction();
 
     }
 
