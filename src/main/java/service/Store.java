@@ -15,4 +15,5 @@ public interface Store extends Closeable {
     String get(String key);
 
     void rm(String key);
+    void reDoLog();
 }

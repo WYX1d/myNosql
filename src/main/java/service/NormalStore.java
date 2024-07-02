@@ -4,14 +4,14 @@
  * @Author urmsone urmsone@163.com
  * @date 2024/6/13 02:07
  * @version
+ *
+ *
  */
 package service;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import controller.SocketServerHandler;
 import lombok.Getter;
-import model.Others.Rotate;
 import model.command.Command;
 import model.command.CommandPos;
 import model.command.RmCommand;
@@ -25,25 +25,26 @@ import utils.RandomAccessFileUtil;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.Map;
-import java.util.TreeMap;
+//import java.util.TreeMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.jar.JarEntry;
 
+/**
+ * @author wyx
+ */
 public class NormalStore implements Store {
 
-    public static final String TABLE = ".table";
+    public static final String TABLE = ".txt";
     public static final String RW_MODE = "rw";
     public static final String NAME = "data";
     private final Logger LOGGER = LoggerFactory.getLogger(NormalStore.class);
     private final String logFormat = "[NormalStore][{}]: {}";
 
 
-    /**
-     * 内存表，类似缓存
-     */
-    private TreeMap<String, Command> memTable;
+//    /**
+//     * 内存表，类似缓存
+//     */
+//    private TreeMap<String, Command> memTable;
 
     /**
      * hash索引，存的是数据长度和偏移量
@@ -74,12 +75,12 @@ public class NormalStore implements Store {
     /*
     记录操作个数(set/rm)
     * */
-    private int OperateNums=0;
+    private int operateNums =0;
 
     public NormalStore(String dataDir) {
         this.dataDir = dataDir;
         this.indexLock = new ReentrantReadWriteLock();
-        this.memTable = new TreeMap<String, Command>();
+//        this.memTable = new TreeMap<String, Command>();
         this.index = new HashMap<>();
 
         File file = new File(dataDir);
@@ -95,6 +96,7 @@ public class NormalStore implements Store {
     }
 
 
+
     public void reloadIndex() {
         try {
             RandomAccessFile file = new RandomAccessFile(this.genFilePath(), RW_MODE);
@@ -103,27 +105,20 @@ public class NormalStore implements Store {
             file.seek(start);
             while (start < len) {
                 int cmdLen = file.readInt();
-                if (cmdLen <= 0) {
-                    break; // Exit the loop if cmdLen is non-positive
-                }
                 byte[] bytes = new byte[cmdLen];
-                int bytesRead = file.read(bytes);
-                if (bytesRead == -1) {
-                    break; // Exit the loop if end of file is reached unexpectedly
-                }
-                if (bytesRead != cmdLen) {
-                    break; // Exit the loop to avoid incorrect processing
-                }
+                file.read(bytes);
                 JSONObject value = JSON.parseObject(new String(bytes, StandardCharsets.UTF_8));
-                System.out.println(value);
                 Command command = CommandUtil.jsonToCommand(value);
                 start += 4;
                 if (command != null) {
                     CommandPos cmdPos = new CommandPos((int) start, cmdLen);
                     index.put(command.getKey(), cmdPos);
+//                     如果日志中记载该键值是被删除的，就将其从内存里删去
+//                    if (command.getClass().equals(RmCommand.class)) {
+//                        index.remove(command.getKey(), cmdPos);
+//                    }//去掉删除的索引
                 }
                 start += cmdLen;
-//                start += 4 + cmdLen; // 更新起始位置，加上命令长度和命令长度字段的长度
             }
             file.seek(file.length());
         } catch (Exception e) {
@@ -136,15 +131,14 @@ public class NormalStore implements Store {
     public void set(String key, String value) {
         try {
             SetCommand command = new SetCommand(key, value);
-            byte[] commandBytes = JSONObject.toJSONBytes(command);
+            byte[] commandBytes = command.toByte();
             // 加锁
-
             indexLock.writeLock().lock();
             // TODO://先写内存表，内存表达到一定阀值再写进磁盘
-            if (OperateNums >= THRESHOLD_FOR_PERSISTENCE) {
-                OperateNums = 0;
+            if (operateNums >= THRESHOLD_FOR_PERSISTENCE) {
+                operateNums = 0;
                 System.out.println("开始压缩...");
-                rewritefile();
+                zipFile();
                 System.out.println("数据已压缩到磁盘！");
             }
             // 写table（wal）文件
@@ -154,7 +148,7 @@ public class NormalStore implements Store {
             // 添加索引
             CommandPos cmdPos = new CommandPos(pos, commandBytes.length);
             index.put(key, cmdPos);
-            OperateNums++;
+            operateNums++;
         } catch (Throwable t) {
             throw new RuntimeException(t);
         } finally {
@@ -162,20 +156,21 @@ public class NormalStore implements Store {
         }
     }
     //将数据重新写入磁盘
-    private void rewritefile() {
-        //rotate压缩(压缩table)
+    public void zipFile() {
+        //rotate压缩文件
         Rotate rotate = new Rotate(this.genFilePath());
         rotate.start();
+        //压缩索引
         index.clear();
-        reloadIndex();//重构索引
-        // 重写数据库文件
-        try (FileWriter writer = new FileWriter("my_db")) {
-            for (String key : this.getIndex().keySet()) {
-                writer.write(key + "," + this.get(key) + "\r\n");
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        reloadIndex();
+//        // 重写数据库文件
+//        try (FileWriter writer = new FileWriter(this.genFilePath())) {
+//            for (String key : this.getIndex().keySet()) {
+//                writer.write(key + ":" + this.get(key) + "\r\n");
+//            }
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
     }
 
 
@@ -191,13 +186,20 @@ public class NormalStore implements Store {
             }
             byte[] commandBytes = RandomAccessFileUtil.readByIndex(this.genFilePath(), cmdPos.getPos(), cmdPos.getLen());
 
-            JSONObject value = JSONObject.parseObject(new String(commandBytes));
-            Command cmd = CommandUtil.jsonToCommand(value);
+            JSONObject value = null;
+            if (commandBytes != null) {
+                value = JSONObject.parseObject(new String(commandBytes));
+            }
+            Command cmd = null;
+            if (value != null) {
+                cmd = CommandUtil.jsonToCommand(value);
+            }
             if (cmd instanceof SetCommand) {
                 return ((SetCommand) cmd).getValue();
             }
             if (cmd instanceof RmCommand) {
                 return null;
+//                return "不存在！";
             }
 
         } catch (Throwable t) {
@@ -212,32 +214,44 @@ public class NormalStore implements Store {
     public void rm(String key) {
         try {
             RmCommand command = new RmCommand(key);
-            byte[] commandBytes = JSONObject.toJSONBytes(command);
+            byte[] commandBytes = command.toByte();
             // 加锁
             indexLock.writeLock().lock();
             // TODO://先写内存表，内存表达到一定阀值再写进磁盘
-            if (OperateNums >= THRESHOLD_FOR_PERSISTENCE) {
-                OperateNums = 0;
-                rewritefile();
+            if (operateNums >= THRESHOLD_FOR_PERSISTENCE) {
+                operateNums = 0;
+                System.out.println("开始压缩...");
+                zipFile();
                 System.out.println("数据已压缩到磁盘！");
             }
             // 写table（wal）文件，返回偏移量
             RandomAccessFileUtil.writeInt(this.genFilePath(), commandBytes.length);
-            int pos = RandomAccessFileUtil.write(this.genFilePath(), commandBytes);
+//            int pos = RandomAccessFileUtil.write(this.genFilePath(), commandBytes);
+            RandomAccessFileUtil.write(this.genFilePath(), commandBytes);
 
             // 添加索引
-            CommandPos cmdPos = new CommandPos(pos, commandBytes.length);
-            index.put(key, cmdPos);
-            OperateNums++;
+//            CommandPos cmdPos = new CommandPos(pos, commandBytes.length);
+//            index.put(key, cmdPos);
+            //确保不出意外查不到已经删除的数据
+            index.remove(key);
+            operateNums++;
         } catch (Throwable t) {
             throw new RuntimeException(t);
         } finally {
             indexLock.writeLock().unlock();
         }
     }
-
+    //回放功能
     @Override
-    public void close() throws IOException {
+    public void reDoLog() {
+//        reloadIndex();
+//        zipFile();
+
+        ReDoLog r=new ReDoLog(this);
+        r.ReDoLog();
+    }
+    @Override
+    public void close() {
         try {
             if (writerReader != null) {
                 writerReader.close();

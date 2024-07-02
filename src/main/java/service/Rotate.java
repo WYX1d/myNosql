@@ -1,13 +1,7 @@
-package model.Others;
+package service;
 
 import lombok.Getter;
-import model.command.CommandPos;
-import service.NormalStore;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Scanner;
@@ -24,10 +18,10 @@ public class Rotate extends Thread {
     @Override
     public void run() {
         // 清空数据库文件
-        ClearDataBaseFile("my_db");
+//        ClearDataBaseFile();
 
         // 压缩日志文件
-        CompressIndexFile(this.genFilePath);
+        CompressIndexFile();
 
 
     }
@@ -36,7 +30,7 @@ public class Rotate extends Thread {
         return "Rotate{}";
     }
     //压缩文件操作
-    public void CompressIndexFile(String filePath) {
+    public void CompressIndexFile() {
         ArrayList<String> arrayList = new ArrayList<>();
         HashSet<String> hashSet = new HashSet<>();
 
@@ -49,13 +43,10 @@ public class Rotate extends Thread {
                     hashSet.add(line);
                 }
             }
-            //arrayList.remove(arrayList.size() - 1);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
-
-        ClearDataBaseFile(this.genFilePath);
-
+        ClearDataBaseFile();
         try (FileWriter writer = new FileWriter(this.genFilePath)) {
             for (String line : arrayList) {
                 writer.write(line + "\r\n");
@@ -67,11 +58,17 @@ public class Rotate extends Thread {
 
     }
 
-    public void ClearDataBaseFile(String filePath) {
-        try (FileWriter writer = new FileWriter(filePath)) {
+    public void ClearDataBaseFile() {
+        try (FileWriter writer = new FileWriter(this.genFilePath)) {
             // 无法写入
         } catch (IOException e) {
             e.printStackTrace();
         }
+//        try (RandomAccessFile raf = new RandomAccessFile(filePath, "rw")) {
+//            // 将文件指针移动到文件开头
+//            raf.setLength(0); // 清空文件内容
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
     }
 }

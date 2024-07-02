@@ -43,24 +43,6 @@ public class SocketServerHandler implements Runnable {
             System.out.println("" + dto.toString());
 
             // 处理命令逻辑(TODO://改成可动态适配的模式)
-//            if (dto.getType() == ActionTypeEnum.GET) {
-//                String value = this.store.get(dto.getKey());
-//                LoggerUtil.debug(LOGGER, "[SocketServerHandler][run]: {}", "get action resp" + dto.toString());
-//                RespDTO resp = new RespDTO(RespStatusTypeEnum.SUCCESS, value);
-//                oos.writeObject(resp);
-//                oos.flush();
-//            }
-//            if (dto.getType() == ActionTypeEnum.SET) {
-//                this.store.set(dto.getKey(), dto.getValue());
-//                LoggerUtil.debug(LOGGER, "[SocketServerHandler][run]: {}", "set action resp" + dto.toString());
-//                RespDTO resp = new RespDTO(RespStatusTypeEnum.SUCCESS, null);
-//                oos.writeObject(resp);
-//                oos.flush();
-//            }
-//            if (dto.getType() == ActionTypeEnum.RM) {
-//                this.store.rm(dto.getKey());
-//            }
-// 处理命令逻辑
             handleAction(dto, oos);
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
@@ -68,8 +50,6 @@ public class SocketServerHandler implements Runnable {
             try {
                 socket.close();
             } catch (IOException e) {
-//                e.printStackTrace();
-//                捕获异常时的记录
                 LOGGER.error("Error closing socket", e);
             }
         }
@@ -86,11 +66,13 @@ public class SocketServerHandler implements Runnable {
             case SET:
                 store.set(dto.getKey(), dto.getValue());
                 LoggerUtil.debug(LOGGER, "[SocketServerHandler][run]: {}", "set action resp" + dto.toString());
-                oos.writeObject(new RespDTO(RespStatusTypeEnum.SUCCESS, null));
+                oos.writeObject(new RespDTO(RespStatusTypeEnum.SUCCESS, dto.getValue()));
                 oos.flush();
                 break;
             case RM:
                 store.rm(dto.getKey());
+                oos.writeObject(new RespDTO(RespStatusTypeEnum.SUCCESS, null));
+                oos.flush();
                 break;
             default:
                 //未知操作类型时的警告记录

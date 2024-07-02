@@ -75,7 +75,7 @@ public class CmdClient{
             cmd = parser.parse(options, input);
         } catch (ParseException e) {
             System.err.println("Parsing failed.  Reason: " + e.getMessage());
-            formatter.printHelp("wyxdb", options);
+            formatter.printHelp("my_db", options);
             System.exit(1);
         }
 
@@ -104,7 +104,7 @@ public class CmdClient{
 
     // 打印帮助信息
     private static void PrintHelp(HelpFormatter formatter, Options options) {
-        formatter.printHelp("wyxdb", options, true);
+        formatter.printHelp("my_db", options, true);
     }
 
     public void Test(String[] input) {
