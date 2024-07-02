@@ -10,6 +10,8 @@ package service;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import controller.SocketServerHandler;
+import lombok.Getter;
+import model.Others.Rotate;
 import model.command.Command;
 import model.command.CommandPos;
 import model.command.RmCommand;
@@ -20,10 +22,7 @@ import utils.CommandUtil;
 import utils.LoggerUtil;
 import utils.RandomAccessFileUtil;
 
-import java.io.EOFException;
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
@@ -49,6 +48,7 @@ public class NormalStore implements Store {
     /**
      * hash索引，存的是数据长度和偏移量
      * */
+    @Getter
     private HashMap<String, CommandPos> index;
 
     /**
@@ -70,7 +70,11 @@ public class NormalStore implements Store {
     /**
      * 持久化阈值
      */
-    private static final int THRESHOLD_FOR_PERSISTENCE = 30;
+    private static final int THRESHOLD_FOR_PERSISTENCE = 4;
+    /*
+    记录操作个数(set/rm)
+    * */
+    private int OperateNums=0;
 
     public NormalStore(String dataDir) {
         this.dataDir = dataDir;
@@ -134,49 +138,47 @@ public class NormalStore implements Store {
             SetCommand command = new SetCommand(key, value);
             byte[] commandBytes = JSONObject.toJSONBytes(command);
             // 加锁
+
             indexLock.writeLock().lock();
             // TODO://先写内存表，内存表达到一定阀值再写进磁盘
+            if (OperateNums >= THRESHOLD_FOR_PERSISTENCE) {
+                OperateNums = 0;
+                System.out.println("开始压缩...");
+                rewritefile();
+                System.out.println("数据已压缩到磁盘！");
+            }
             // 写table（wal）文件
             RandomAccessFileUtil.writeInt(this.genFilePath(), commandBytes.length);
             int pos = RandomAccessFileUtil.write(this.genFilePath(), commandBytes);//返回偏移量
-            // 保存到memTable
-            memTable.put(key, command); // 将指令存入内存表
+
             // 添加索引
             CommandPos cmdPos = new CommandPos(pos, commandBytes.length);
             index.put(key, cmdPos);
-            // TODO://判断是否需要将内存表中的值写回table
-            System.out.println(memTable.size());
-            if (memTable.size() >= THRESHOLD_FOR_PERSISTENCE) {
-                persistMemTable(); // 持久化内存表到磁盘
-                System.out.println("已经持久化内存表到磁盘！");
-            }
+            OperateNums++;
         } catch (Throwable t) {
             throw new RuntimeException(t);
         } finally {
             indexLock.writeLock().unlock();
         }
     }
-    // 将内存表数据持久化到磁盘
-    private void persistMemTable() {
-        try {
-            // 逐个将内存表中的指令写入磁盘
-            for (Map.Entry<String, Command> entry : memTable.entrySet()) {
-                String key = entry.getKey();
-                Command command = entry.getValue();
-                byte[] commandBytes = JSONObject.toJSONBytes(command);
-
-                RandomAccessFileUtil.writeInt(this.genFilePath(), commandBytes.length);
-                int pos = RandomAccessFileUtil.write(this.genFilePath(), commandBytes);
-
-                CommandPos cmdPos = new CommandPos(pos, commandBytes.length);
-                index.put(key, cmdPos);
+    //将数据重新写入磁盘
+    private void rewritefile() {
+        //rotate压缩(压缩table)
+        Rotate rotate = new Rotate(this.genFilePath());
+        rotate.start();
+        index.clear();
+        reloadIndex();//重构索引
+        // 重写数据库文件
+        try (FileWriter writer = new FileWriter("my_db")) {
+            for (String key : this.getIndex().keySet()) {
+                writer.write(key + "," + this.get(key) + "\r\n");
             }
-            // 清空内存表
-            memTable.clear();
-        } catch (Exception e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
+
     //查询数据
     @Override
     public String get(String key) {
@@ -214,22 +216,19 @@ public class NormalStore implements Store {
             // 加锁
             indexLock.writeLock().lock();
             // TODO://先写内存表，内存表达到一定阀值再写进磁盘
-
+            if (OperateNums >= THRESHOLD_FOR_PERSISTENCE) {
+                OperateNums = 0;
+                rewritefile();
+                System.out.println("数据已压缩到磁盘！");
+            }
             // 写table（wal）文件，返回偏移量
             RandomAccessFileUtil.writeInt(this.genFilePath(), commandBytes.length);
             int pos = RandomAccessFileUtil.write(this.genFilePath(), commandBytes);
-            // 保存到memTable
-            memTable.put(key, command); // 将指令存入内存表
 
             // 添加索引
             CommandPos cmdPos = new CommandPos(pos, commandBytes.length);
             index.put(key, cmdPos);
-
-            // TODO://判断是否需要将内存表中的值写回table
-            if (memTable.size() >= THRESHOLD_FOR_PERSISTENCE) {
-                persistMemTable(); // 持久化内存表到磁盘
-                System.out.println("已经持久化内存表到磁盘！");
-            }
+            OperateNums++;
         } catch (Throwable t) {
             throw new RuntimeException(t);
         } finally {
