@@ -1,61 +1,80 @@
 package service;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import lombok.Getter;
+import model.command.Command;
+import model.command.CommandPos;
+import model.command.RmCommand;
+import model.command.SetCommand;
+import utils.CommandUtil;
+import utils.LoggerUtil;
+
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Scanner;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 public class Rotate extends Thread {
     @Getter
     private static String genFilePath;
 
     public Rotate(String filePath) {
-       this.genFilePath=filePath;
+        this.genFilePath = filePath;
     }
-
 
     @Override
     public void run() {
-        // 清空数据库文件
-//        ClearDataBaseFile();
-
         // 压缩日志文件
         CompressIndexFile();
-
 
     }
 
     public String toString() {
         return "Rotate{}";
     }
+
     //压缩文件操作
     public void CompressIndexFile() {
         ArrayList<String> arrayList = new ArrayList<>();
-        HashSet<String> hashSet = new HashSet<>();
-
+        ArrayList<String> arr = new ArrayList<>();
         try (Scanner scanner = new Scanner(new File(this.genFilePath))) {
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
-                // 处理每一行
-                if (!hashSet.contains(line)) {
-                    arrayList.add(line);
-                    hashSet.add(line);
-                }
+                arrayList.add(line);//每行字符串添加到arrayList
+                String key=tokey(line);
+                arr.add(key);//每行字符串的key添加到arr
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
+
+        HashMap<String, Integer> lastIndexMap = new HashMap<>();
+        for (int i = 0; i < arr.size(); i++) {
+            String element = arr.get(i);
+            lastIndexMap.put(element, i); // 更新元素最后出现的索引
+        }
+
         ClearDataBaseFile();
+
         try (FileWriter writer = new FileWriter(this.genFilePath)) {
-            for (String line : arrayList) {
-                writer.write(line + "\r\n");
+            for (int i=0;i<arrayList.size();i++){
+                if (lastIndexMap.containsValue(i)) {
+                    //将lastIndexMap已经去重的元素顺序压缩保存
+                    writer.write(arrayList.get(i) + "\r\n");
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
 
 
+    }
+    //将每行字符串的key提取出来
+    public String tokey(String line){
+        String subItem = line.substring(4);
+        JSONObject value = JSON.parseObject(new String(subItem));
+        Command command = CommandUtil.jsonToCommand(value);
+        return command.getKey();
     }
 
     public void ClearDataBaseFile() {
@@ -64,11 +83,5 @@ public class Rotate extends Thread {
         } catch (IOException e) {
             e.printStackTrace();
         }
-//        try (RandomAccessFile raf = new RandomAccessFile(filePath, "rw")) {
-//            // 将文件指针移动到文件开头
-//            raf.setLength(0); // 清空文件内容
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
     }
 }

@@ -26,6 +26,8 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 //import java.util.TreeMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -126,6 +128,7 @@ public class NormalStore implements Store {
         }
         LoggerUtil.debug(LOGGER, logFormat, "reload index: "+index.toString());
     }
+
      //增改操作
     @Override
     public void set(String key, String value) {
@@ -199,7 +202,6 @@ public class NormalStore implements Store {
             }
             if (cmd instanceof RmCommand) {
                 return null;
-//                return "不存在！";
             }
 
         } catch (Throwable t) {
@@ -244,11 +246,26 @@ public class NormalStore implements Store {
     //回放功能
     @Override
     public void reDoLog() {
-//        reloadIndex();
-//        zipFile();
+        zipFile();
+        index.clear();
+        reloadIndex();
+    }
+    //多线程执行reDOLog
+    public void multStarReDolog(){
+        int numberOfThreads = 3; // 想要执行的 reDoLog 方法的数量
 
-        ReDoLog r=new ReDoLog(this);
-        r.ReDoLog();
+        // 创建一个固定大小的线程池
+        ExecutorService executor = Executors.newFixedThreadPool(numberOfThreads);
+
+        // 提交多个 reDoLog 方法给线程池执行
+        for (int i = 0; i < numberOfThreads; i++) {
+            executor.submit(() -> {
+                this.reDoLog();
+            });
+        }
+
+        // 关闭线程池
+        executor.shutdown();
     }
     @Override
     public void close() {
