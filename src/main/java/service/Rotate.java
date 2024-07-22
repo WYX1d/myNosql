@@ -16,7 +16,7 @@ import java.util.*;
 
 public class Rotate extends Thread {
     @Getter
-    private static String genFilePath;
+    private  String genFilePath;
 
     public Rotate(String filePath) {
         this.genFilePath = filePath;
@@ -34,7 +34,8 @@ public class Rotate extends Thread {
     }
 
     //压缩文件操作
-    public void CompressIndexFile() {
+    public boolean CompressIndexFile() {
+        System.out.println("正在进行压缩...");
         ArrayList<String> arrayList = new ArrayList<>();
         ArrayList<String> arr = new ArrayList<>();
         try (Scanner scanner = new Scanner(new File(this.genFilePath))) {
@@ -54,8 +55,9 @@ public class Rotate extends Thread {
             lastIndexMap.put(element, i); // 更新元素最后出现的索引
         }
 
+        //清空原文件
         ClearDataBaseFile();
-
+        //重新写入
         try (FileWriter writer = new FileWriter(this.genFilePath)) {
             for (int i=0;i<arrayList.size();i++){
                 if (lastIndexMap.containsValue(i)) {
@@ -67,11 +69,18 @@ public class Rotate extends Thread {
             e.printStackTrace();
         }
 
-
+        if (lastIndexMap.size() < arrayList.size()) {
+            System.out.println("数据已压缩");
+            return true;
+        } else {
+            System.out.println("当前数据不可压缩");
+            return false;
+    }
     }
     //将每行字符串的key提取出来
     public String tokey(String line){
         String subItem = line.substring(4);
+        System.out.println(subItem);
         JSONObject value = JSON.parseObject(new String(subItem));
         Command command = CommandUtil.jsonToCommand(value);
         return command.getKey();

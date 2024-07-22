@@ -15,7 +15,7 @@ import java.util.Scanner;
 
 public class SocketClientUsage {
     private static String host = "localhost";
-    private static int port = 12345;
+    private static int port = 12344;
    private static Client client = new SocketClient(host, port);
     public static void main(String[] args) {
         CmdClient cmdClient = new CmdClient(client);

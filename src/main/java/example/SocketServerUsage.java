@@ -16,7 +16,7 @@ import java.io.File;
 public class SocketServerUsage {
     public static void main(String[] args) {
         String host = "localhost";
-        int port = 12345;
+        int port = 12344;
         String dataDir = "data"+ File.separator;
         Store store = new NormalStore(dataDir);
         SocketServerController controller = new SocketServerController(host, port, store);
