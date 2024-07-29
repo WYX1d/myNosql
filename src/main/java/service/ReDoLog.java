@@ -14,7 +14,7 @@ public class ReDoLog {
     // 回放功能
     public void reDoLog() {
         // 提交任务到线程池执行
-        executor.submit(normalStore::reloadIndex);
+//        executor.submit(normalStore::reloadIndex);
         executor.submit(normalStore::zipFile);
 
     }

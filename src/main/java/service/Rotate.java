@@ -43,6 +43,9 @@ public class Rotate extends Thread {
                 String line = scanner.nextLine();
                 arrayList.add(line);//每行字符串添加到arrayList
                 String key=tokey(line);
+                if (key==null){
+                    break ;
+                }
                 arr.add(key);//每行字符串的key添加到arr
             }
         } catch (FileNotFoundException e) {
@@ -82,6 +85,9 @@ public class Rotate extends Thread {
         String subItem = line.substring(4);
         System.out.println(subItem);
         JSONObject value = JSON.parseObject(new String(subItem));
+        if (value==null){
+            return null;
+        }
         Command command = CommandUtil.jsonToCommand(value);
         return command.getKey();
     }
